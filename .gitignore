@@ -1,0 +1,48 @@
+# ── Large datasets — keep locally, don't track in git ───────
+phase1_env/datasets/edge_iiotset/
+phase1_env/hai/hai-21.03/*.csv.gz
+phase1_env/hai/hai-20.07/*.csv*
+phase1_env/hai/hai-22.04/*.csv*
+phase1_env/hai/hai-23.05/*.csv*
+phase1_env/hai/haiend-23.05/*.csv*
+phase1_env/ot_simulators/modbus_plc/data/
+# But DO keep documentation that goes with the datasets
+!phase1_env/hai/README.md
+!phase1_env/hai/hai_dataset_technical_details.pdf
+
+# ── Python ──────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.venv/
+venv/
+
+# ── Docker — local volumes (state, not config) ─────────────
+# Named volumes are managed by Docker, not files
+
+# ── macOS ──────────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+
+# ── IDE ────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ── Claude / planning files (personal) ──────────────────────
+# Plan files are user-specific, not project artifacts
+phase1_env/.claude/
+
+# ── Logs ───────────────────────────────────────────────────
+*.log
+
+# ── Screenshots (you can move into docs/ if you want them tracked) ──
+"Screenshot *.png"

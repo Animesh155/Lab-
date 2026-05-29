@@ -1,0 +1,16 @@
+apiVersion: 1
+
+datasources:
+  - name: InfluxDB-Diode
+    type: influxdb
+    access: proxy
+    url: http://influxdb:8086
+    isDefault: true
+    jsonData:
+      version: Flux
+      organization: diode
+      defaultBucket: metrics
+      tlsSkipVerify: true
+    secureJsonData:
+      token: diode-dev-token-please-change
+    editable: true

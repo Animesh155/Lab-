@@ -1,0 +1,100 @@
+[
+    {
+        "id": "f6f2187d.f17a78",
+        "type": "tab",
+        "label": "OT Data Simulator",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "1",
+        "type": "inject",
+        "z": "f6f2187d.f17a78",
+        "name": "Every 5s",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "5",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 130,
+        "y": 80,
+        "wires": [
+            [
+                "2"
+            ]
+        ]
+    },
+    {
+        "id": "2",
+        "type": "function",
+        "z": "f6f2187d.f17a78",
+        "name": "Generate PLC Data",
+        "func": "msg.payload = {\n    timestamp: new Date().toISOString(),\n    tags: {\n        temperature: (Math.random() * 20 + 70).toFixed(2), // 70-90°F\n        pressure: (Math.random() * 5 + 30).toFixed(2),    // 30-35 PSI\n        status: Math.random() > 0.1 ? \"RUNNING\" : \"FAULT\"\n    }\n};\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 330,
+        "y": 80,
+        "wires": [
+            [
+                "3",
+                "4"
+            ]
+        ]
+    },
+    {
+        "id": "3",
+        "type": "debug",
+        "z": "f6f2187d.f17a78",
+        "name": "Monitor Output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 540,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "4",
+        "type": "http response",
+        "z": "f6f2187d.f17a78",
+        "name": "",
+        "statusCode": "200",
+        "headers": {},
+        "x": 530,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "5",
+        "type": "http in",
+        "z": "f6f2187d.f17a78",
+        "name": "",
+        "url": "/api/plc-data",
+        "method": "get",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 130,
+        "y": 140,
+        "wires": [
+            [
+                "2"
+            ]
+        ]
+    }
+]

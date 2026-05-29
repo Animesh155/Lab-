@@ -1,0 +1,208 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": true,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Diode Heartbeat",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "influxdb", "uid": "InfluxDB-Diode" },
+      "targets": [
+        {
+          "datasource": { "type": "influxdb", "uid": "InfluxDB-Diode" },
+          "query": "from(bucket: \"metrics\") |> range(start: -1m) |> filter(fn: (r) => r._measurement == \"diode_stats\" and r._field == \"heartbeat_state\") |> last()"
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value_and_name",
+        "orientation": "horizontal",
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "UNKNOWN",  "color": "yellow" } } },
+            { "type": "value", "options": { "1": { "text": "HEALTHY",  "color": "green" } } },
+            { "type": "value", "options": { "2": { "text": "SILENT (ALARM)", "color": "red" } } }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "red" }] }
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "PLC Adapter Health",
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "type": "influxdb", "uid": "InfluxDB-Diode" },
+      "targets": [
+        {
+          "datasource": { "type": "influxdb", "uid": "InfluxDB-Diode" },
+          "query": "from(bucket: \"metrics\") |> range(start: -1m) |> filter(fn: (r) => r._measurement == \"diode_stats\" and r._field == \"plc_healthy\") |> last()"
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value_and_name",
+        "orientation": "horizontal",
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "PLC FAIL",   "color": "red" } } },
+            { "type": "value", "options": { "1": { "text": "PLC GOOD",   "color": "green" } } }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "red" }] }
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Frames / Lost",
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 },
+      "datasource": { "type": "influxdb", "uid": "InfluxDB-Diode" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "influxdb", "uid": "InfluxDB-Diode" },
+          "query": "from(bucket: \"metrics\") |> range(start: -1m) |> filter(fn: (r) => r._measurement == \"diode_stats\" and r._field == \"received\") |> last()"
+        },
+        {
+          "refId": "B",
+          "datasource": { "type": "influxdb", "uid": "InfluxDB-Diode" },
+          "query": "from(bucket: \"metrics\") |> range(start: -1m) |> filter(fn: (r) => r._measurement == \"diode_stats\" and r._field == \"confirmed_lost\") |> last()"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "textMode": "value_and_name",
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "green" }] }
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Heartbeat Age (sec)",
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 },
+      "datasource": { "type": "influxdb", "uid": "InfluxDB-Diode" },
+      "targets": [
+        {
+          "datasource": { "type": "influxdb", "uid": "InfluxDB-Diode" },
+          "query": "from(bucket: \"metrics\") |> range(start: -1m) |> filter(fn: (r) => r._measurement == \"diode_stats\" and r._field == \"heartbeat_age_s\") |> last()"
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value_and_name",
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": null, "color": "green" },
+              { "value": 3, "color": "yellow" },
+              { "value": 5, "color": "red" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Stage 1 — Flow Transmitters",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "datasource": { "type": "influxdb", "uid": "InfluxDB-Diode" },
+      "targets": [
+        {
+          "datasource": { "type": "influxdb", "uid": "InfluxDB-Diode" },
+          "query": "from(bucket: \"metrics\") |> range(start: -10m) |> filter(fn: (r) => r._measurement == \"sensor_reading\" and r._field == \"value\" and (r.tag_name == \"P1_FT01_intake_flow_1\" or r.tag_name == \"P1_FT01Z_intake_flow_1z\" or r.tag_name == \"P1_FT02_transfer_flow\" or r.tag_name == \"P1_FT03_output_flow\")) |> aggregateWindow(every: 1s, fn: mean) |> drop(columns: [\"tag_id\", \"quality\"])"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 } } }
+    },
+    {
+      "type": "timeseries",
+      "title": "Stage 1 — Pressure & Temperature",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "datasource": { "type": "influxdb", "uid": "InfluxDB-Diode" },
+      "targets": [
+        {
+          "datasource": { "type": "influxdb", "uid": "InfluxDB-Diode" },
+          "query": "from(bucket: \"metrics\") |> range(start: -10m) |> filter(fn: (r) => r._measurement == \"sensor_reading\" and r._field == \"value\" and (r.tag_name == \"P1_PIT01_pressure_1\" or r.tag_name == \"P1_PIT02_pressure_2\" or r.tag_name == \"P1_TIT01_temperature_1\" or r.tag_name == \"P1_TIT02_temperature_2\")) |> aggregateWindow(every: 1s, fn: mean) |> drop(columns: [\"tag_id\", \"quality\"])"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 } } }
+    },
+    {
+      "type": "timeseries",
+      "title": "Stage 1 — Tank Level & Valves",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
+      "datasource": { "type": "influxdb", "uid": "InfluxDB-Diode" },
+      "targets": [
+        {
+          "datasource": { "type": "influxdb", "uid": "InfluxDB-Diode" },
+          "query": "from(bucket: \"metrics\") |> range(start: -10m) |> filter(fn: (r) => r._measurement == \"sensor_reading\" and r._field == \"value\" and (r.tag_name == \"P1_LIT01_tank_level\" or r.tag_name == \"P1_LCV01D_lvl_valve_D\" or r.tag_name == \"P1_LCV01Z_lvl_valve_Z\" or r.tag_name == \"P1_PCV01D_press_valve_D\" or r.tag_name == \"P1_PCV01Z_press_valve_Z\" or r.tag_name == \"P1_FCV03D_flow_valve_D\" or r.tag_name == \"P1_FCV03Z_flow_valve_Z\")) |> aggregateWindow(every: 1s, fn: mean) |> drop(columns: [\"tag_id\", \"quality\"])"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 } } }
+    },
+    {
+      "type": "timeseries",
+      "title": "Diode Frame Counters",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
+      "datasource": { "type": "influxdb", "uid": "InfluxDB-Diode" },
+      "targets": [
+        {
+          "datasource": { "type": "influxdb", "uid": "InfluxDB-Diode" },
+          "query": "from(bucket: \"metrics\") |> range(start: -10m) |> filter(fn: (r) => r._measurement == \"diode_stats\" and (r._field == \"received\" or r._field == \"unique\" or r._field == \"duplicates\" or r._field == \"reordered\" or r._field == \"confirmed_lost\"))"
+        }
+      ],
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 5 } } }
+    },
+    {
+      "type": "table",
+      "title": "Heartbeat Events",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 22 },
+      "datasource": { "type": "influxdb", "uid": "InfluxDB-Diode" },
+      "targets": [
+        {
+          "datasource": { "type": "influxdb", "uid": "InfluxDB-Diode" },
+          "query": "from(bucket: \"metrics\") |> range(start: -1h) |> filter(fn: (r) => r._measurement == \"heartbeat_event\" and r._field == \"message\") |> keep(columns: [\"_time\", \"event_type\", \"_value\"]) |> rename(columns: {_value: \"message\"}) |> sort(columns: [\"_time\"], desc: true)"
+        }
+      ]
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["diode", "hai", "swat"],
+  "templating": { "list": [] },
+  "time": { "from": "now-15m", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Data Diode — Live View",
+  "uid": "diode-live",
+  "version": 1,
+  "weekStart": ""
+}

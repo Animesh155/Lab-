@@ -1,0 +1,199 @@
+# ══════════════════════════════════════════════════════════════
+#  DATA DIODE SIMULATION — Multi-Protocol Pipeline
+#
+#  Data flow (one direction only):
+#
+#  plc-modbus ──(ot-net)──▶ ot-proxy ──(diode-net)──▶ fpga-sim ──(it-net)──▶ it-proxy
+#  (Modbus TCP                (Modbus adapter +        (CRC+FIFO+Forward)    (Dedup+Decode)
+#   fake PLC,                  Frame+Copy+Send)
+#   15 sensors)
+#
+#  Legacy ot-simulator (Node-RED, HTTP/JSON) kept for backward compat
+#  but ot-proxy now defaults to Modbus adapter.
+# ══════════════════════════════════════════════════════════════
+
+services:
+
+  # ── ZONE 0: MODBUS PLC SIMULATOR (water treatment plant) ────
+  plc-modbus:
+    build:
+      context: ./ot_simulators/modbus_plc
+    container_name: plc-modbus
+    networks:
+      - ot-net
+    restart: unless-stopped
+
+  # ── ZONE 1: LEGACY Node-RED simulator (kept but unused by default) ──
+  ot-simulator:
+    image: nodered/node-red:latest
+    container_name: ot-simulator
+    environment:
+      - TZ=UTC
+    networks:
+      - ot-net
+    ports:
+      - "1880:1880"
+    volumes:
+      - ./node_red_data:/data
+    restart: unless-stopped
+
+  # ── ZONE 2: OT-SIDE PROXY (multi-adapter) ──────────────────
+  ot-proxy:
+    build:
+      context: ./ot_proxy
+    container_name: ot-proxy
+    working_dir: /app
+    command: python -u ot_proxy.py
+    volumes:
+      - ./ot_proxy:/app
+    environment:
+      - ADAPTER=modbus              # use Modbus adapter (was: http)
+      - MODBUS_HOST=plc-modbus
+      - MODBUS_PORT=502
+      - FPGA_HOST=fpga-sim
+      - FPGA_PORT=5000
+      - POLL_INTERVAL=1.0
+      - NUM_COPIES=3
+      - INTERLEAVE_DEPTH=3
+    networks:
+      - ot-net        # can reach plc-modbus
+      - diode-net     # can reach fpga-sim
+    depends_on:
+      - plc-modbus
+    restart: unless-stopped
+
+  # ── ZONE 3: FPGA SIMULATOR (The One-Way Gate) ──────────────
+  fpga-sim:
+    image: python:3.12-slim
+    container_name: fpga-sim
+    working_dir: /app
+    command: python -u fpga_sim.py
+    volumes:
+      - ./fpga_sim:/app
+    environment:
+      - FPGA_LISTEN_PORT=5000
+      - IT_PROXY_HOST=it-proxy
+      - IT_PROXY_PORT=6000
+      - FIFO_DEPTH=64
+      - CORRUPT_RATE=0.0
+    networks:
+      - diode-net     # receives from ot-proxy
+      - it-net        # sends to it-proxy
+    restart: unless-stopped
+
+  # ── ZONE 4: IT-SIDE PROXY (The Receiver) ───────────────────
+  it-proxy:
+    build:
+      context: ./it_proxy
+    container_name: it-proxy
+    working_dir: /app
+    command: python -u it_proxy.py
+    volumes:
+      - ./it_proxy:/app
+    environment:
+      - IT_LISTEN_PORT=6000
+      - DEDUP_WINDOW=1000
+      # Dashboard / InfluxDB push config
+      - INFLUX_URL=http://influxdb:8086
+      - INFLUX_ORG=diode
+      - INFLUX_BUCKET=metrics
+      - INFLUX_TOKEN=diode-dev-token-please-change
+    networks:
+      - it-net
+    depends_on:
+      - influxdb
+    restart: unless-stopped
+
+  # ── DASHBOARD STACK: InfluxDB time-series store ────────────
+  influxdb:
+    image: influxdb:2.7
+    container_name: influxdb
+    environment:
+      # Auto-setup on first start (skipped if data volume already initialized)
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=diode-admin
+      - DOCKER_INFLUXDB_INIT_ORG=diode
+      - DOCKER_INFLUXDB_INIT_BUCKET=metrics
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=diode-dev-token-please-change
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+      - influxdb-config:/etc/influxdb2
+    networks:
+      - it-net
+    ports:
+      - "8086:8086"           # expose for debugging (optional)
+    restart: unless-stopped
+
+  # ── DASHBOARD STACK: Grafana UI ────────────────────────────
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_AUTH_ANONYMOUS_ENABLED=true     # read-only view without login
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./dashboard/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./dashboard/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - it-net
+    ports:
+      - "3000:3000"           # open http://localhost:3000 in your browser
+    depends_on:
+      - influxdb
+    restart: unless-stopped
+
+  # ── ATTACKER: PCAP REPLAYER (simulates compromised OT host) ─
+  # Sits on diode-net so it can reach fpga-sim:5000 directly.
+  # Reads attack PCAPs from Edge-IIoTset and fires them at the diode.
+  # Has profiles=attack so it only runs when explicitly enabled:
+  #   docker compose --profile attack up -d attack-replayer
+  attack-replayer:
+    build:
+      context: ./attack_replayer
+    container_name: attack-replayer
+    profiles:
+      - attack
+    volumes:
+      # Mount the Edge-IIoTset attack PCAPs read-only
+      - ./datasets/edge_iiotset/Edge-IIoTset dataset/Attack traffic:/attacks:ro
+    environment:
+      - ATTACK_PCAP=/attacks/Port Scanning attack.pcap
+      - TARGET_HOST=fpga-sim
+      - TARGET_PORT=5000
+      - REPLAY_RATE=100.0         # 100x — heavy stress test
+      - MAX_PACKETS=3000           # bigger burst
+      - LOOP=false
+      - STARTUP_DELAY=5
+    networks:
+      - diode-net               # same network as ot-proxy + fpga-sim
+    depends_on:
+      - fpga-sim
+
+# ══════════════════════════════════════════════════════════════
+#  NETWORKS — simulate physical separation
+# ══════════════════════════════════════════════════════════════
+networks:
+
+  ot-net:
+    driver: bridge
+    internal: true       # no internet — isolated factory floor
+
+  diode-net:
+    driver: bridge
+    internal: true       # only ot-proxy ↔ fpga-sim
+
+  it-net:
+    driver: bridge       # IT side can reach internet
+
+# ══════════════════════════════════════════════════════════════
+#  VOLUMES — persist InfluxDB + Grafana state across restarts
+# ══════════════════════════════════════════════════════════════
+volumes:
+  influxdb-data:
+  influxdb-config:
+  grafana-data:
