@@ -1,0 +1,106 @@
+#cloud-config
+# ══════════════════════════════════════════════════════════════
+#  Lab Recon — Cloud-init for student VMs
+#
+#  Tested on: Ubuntu 22.04 LTS cloud image (AWS, GCP, Azure,
+#             DigitalOcean, Hetzner, Vultr).
+#
+#  What this does on first boot:
+#    1. Installs Docker + compose plugin + git
+#    2. Creates a `student` user with sudo + SSH key
+#    3. Clones the lab repo
+#    4. Runs provision.sh which builds & starts the lab stack
+#
+#  Customise BEFORE handing to students:
+#    - REPO_URL   (where this repo is hosted)
+#    - REPO_REF   (branch/tag — pin so labs are reproducible)
+#    - ssh_authorized_keys: replace with the real student key(s)
+#    - default user password (set by your cloud provider)
+# ══════════════════════════════════════════════════════════════
+
+package_update: true
+package_upgrade: false   # keep boot fast; labs are throwaway
+
+packages:
+  - git
+  - curl
+  - ca-certificates
+  - jq
+  - htop
+  - vim
+  - tmux
+
+users:
+  - name: student
+    groups: [sudo, docker]
+    shell: /bin/bash
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
+    lock_passwd: false
+    ssh_authorized_keys:
+      # REPLACE with the student's actual public key before launching
+      - "ssh-ed25519 AAAA...REPLACE_ME student@lab"
+
+write_files:
+  - path: /etc/lab/lab.env
+    permissions: '0644'
+    content: |
+      # ── Lab configuration — edit before image-bake ──
+      REPO_URL="https://github.com/REPLACE_ME/data-diode.git"
+      REPO_REF="main"
+      LAB_DIR="/opt/lab"
+      COMPOSE_PROJECT="lab_recon"
+
+  - path: /etc/motd
+    permissions: '0644'
+    content: |
+
+      ┌────────────────────────────────────────────────────────┐
+      │  OT SECURITY LAB — RECON MODULE                        │
+      │                                                        │
+      │  You are on an IT host that has been compromised.      │
+      │  Your toolkit is inside the `attacker` container.      │
+      │                                                        │
+      │  Get to your toolkit:                                  │
+      │    docker exec -it attacker bash                       │
+      │                                                        │
+      │  Scope of this engagement:                             │
+      │    172.20.0.0/16                                       │
+      │                                                        │
+      │  Lab status:                                           │
+      │    sudo /opt/lab/phase1_env/lab_recon/status.sh        │
+      └────────────────────────────────────────────────────────┘
+
+runcmd:
+  # Install Docker from official repo (cloud images sometimes ship without it)
+  - |
+    set -eux
+    install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
+      -o /etc/apt/keyrings/docker.asc
+    chmod a+r /etc/apt/keyrings/docker.asc
+    UBU_CODENAME=$(. /etc/os-release && echo "$VERSION_CODENAME")
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] \
+      https://download.docker.com/linux/ubuntu $UBU_CODENAME stable" \
+      > /etc/apt/sources.list.d/docker.list
+    apt-get update -qq
+    apt-get install -y \
+      docker-ce docker-ce-cli containerd.io \
+      docker-buildx-plugin docker-compose-plugin
+    systemctl enable --now docker
+
+  # Clone the lab repo and run provisioning
+  - |
+    set -eux
+    . /etc/lab/lab.env
+    mkdir -p "$(dirname "$LAB_DIR")"
+    if [ ! -d "$LAB_DIR/.git" ]; then
+      git clone --depth 1 --branch "$REPO_REF" "$REPO_URL" "$LAB_DIR"
+    fi
+    chown -R student:student "$LAB_DIR"
+    cd "$LAB_DIR/phase1_env/lab_recon"
+    bash provision.sh
+
+final_message: |
+  Lab VM is up. SSH in as the `student` user.
+  The lab stack should be running — check with:
+    sudo /opt/lab/phase1_env/lab_recon/status.sh

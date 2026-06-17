@@ -1,0 +1,57 @@
+# ══════════════════════════════════════════════════════════════
+#  Lab Recon — Compose overlay
+#
+#  Merges with phase1_env/docker-compose.yml.
+#
+#  What it changes:
+#    1. Pins each network to a known subnet so nmap output is
+#       the same for every student. Brief says scope is
+#       172.20.0.0/16 — they will discover the zones inside.
+#    2. Adds an `attacker` container with the recon toolkit.
+#       Lives on it-net only (foothold model).
+#    3. Disables `internal: true` on it-net so the attacker
+#       container can resolve DNS (the brief allows internet
+#       for OSINT in Section 4 of the task sheet).
+# ══════════════════════════════════════════════════════════════
+
+services:
+
+  attacker:
+    build:
+      context: ./lab_recon/attacker
+    container_name: attacker
+    hostname: it-helpdesk-01      # plausible compromised host name
+    networks:
+      it-net:
+        ipv4_address: 172.20.30.50
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    # Keep the container alive even when no shell is attached
+    command: ["sleep", "infinity"]
+
+networks:
+
+  ot-net:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.20.10.0/24
+
+  diode-net:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.20.20.0/24
+
+  it-net:
+    driver: bridge
+    # NOT internal — students need DNS / internet for OSINT task
+    ipam:
+      config:
+        - subnet: 172.20.30.0/24

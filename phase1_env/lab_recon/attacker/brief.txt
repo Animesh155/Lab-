@@ -1,0 +1,27 @@
+
+═══════════════════════════════════════════════════════════════
+  ENGAGEMENT BRIEF — Module 1: Reconnaissance
+═══════════════════════════════════════════════════════════════
+
+  You are on an IT host inside the corporate network of a
+  chemical processing facility. How you got here is not your
+  problem — phishing, a stolen VPN cred, whatever. You are
+  here now.
+
+  Somewhere on this network there is a plant. You do not yet
+  know where, what process it runs, or what protocols it
+  speaks. That is what you are about to find out.
+
+  Scope of engagement:
+      172.20.0.0/16
+
+  Out of scope:
+      Anything outside that range.
+      The internet — only for OSINT lookups in Section 4.
+
+  Your task sheet (Module 1) is what you fill in as you go.
+  Hand it in at the end of the module.
+
+  Begin.
+
+═══════════════════════════════════════════════════════════════
