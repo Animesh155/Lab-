@@ -91,6 +91,18 @@ For each live host, list open TCP ports.
 >    size** tells you a lot. Steady 1 Hz, one initiator → polling
 >    loop. Bursty + multi-direction → interactive session.
 >
+> **Don't forget UDP.** `nmap` defaults to a **TCP** scan. Some
+> services only speak UDP and are *invisible* to a TCP scan. If a
+> host looks oddly empty — or you suspect one-way / datagram
+> traffic — scan UDP too:
+> ```bash
+> nmap -sU --top-ports 50 <ip>
+> ```
+> UDP results are often `open|filtered` (the host simply didn't
+> reply). Ask yourself: *why would a service never answer a
+> probe?* That property is itself a clue about what the service
+> is for.
+>
 
 | IP | Open TCP ports |
 |---|---|

@@ -18,10 +18,16 @@ Networks (set by `docker-compose.lab.yml`):
 The attacker container is on `it-net` only. From there it can
 directly reach:
 
-- `it-proxy` — listens on TCP/6000 (the diode receiver)
-- `influxdb` — listens on TCP/8086
-- `grafana` — listens on TCP/3000
-- `fpga-sim` — listens on TCP/5000 (it also has an `it-net` leg)
+- `influxdb` — **TCP/8086** (shows up on a normal TCP scan)
+- `grafana` — **TCP/3000** (shows up on a normal TCP scan)
+- `it-proxy` — **UDP/6000** (one-way diode receiver; TCP scan
+  misses it, `-sU` shows `open|filtered`)
+- `fpga-sim` — **UDP/5000** (one-way diode receiver; also has an
+  `it-net` leg, but no TCP listener)
+
+So a default TCP scan reveals only **two** services (8086, 3000);
+the two diode receivers are UDP and effectively invisible to a
+TCP scan. See §1.2 for why this matters pedagogically.
 
 `plc-modbus` is **not** directly reachable from the attacker —
 it's on `ot-net`. Spotting this gap is one of the lab's
@@ -66,24 +72,78 @@ during the debrief, not in advance.
 
 ### 1.2 Port scan — expected ports
 
-| Container | Open TCP |
-|---|---|
-| `fpga-sim` | 5000 |
-| `it-proxy` | 6000 |
-| `influxdb` | 8086 |
-| `grafana` | 3000 |
+**What a default `nmap` scan actually returns.** `nmap` defaults to
+a **TCP** scan. The only TCP services on `it-net` are the two
+dashboard components:
+
+| Container | Open **TCP** | Notes |
+|---|---|---|
+| `influxdb` | 8086 | time-series DB |
+| `grafana` | 3000 | dashboard web UI |
+
+So a student running `nmap <subnet>` (or `nmap -p- <host>`) sees
+**only two open ports**. That surprises people who expect to find
+the diode proxies.
+
+**The diode receivers are UDP, not TCP.** Both `fpga-sim` (5000)
+and `it-proxy` (6000) `bind()` a **UDP** socket — the data diode
+is a one-way *datagram* flow, so there is no TCP listener to find:
+
+| Container | Listener | Why you don't see it on a TCP scan |
+|---|---|---|
+| `fpga-sim` | **UDP/5000** | one-way ingest from `ot-proxy` |
+| `it-proxy` | **UDP/6000** | one-way ingest from `fpga-sim` |
+
+A `-sU` scan *will* surface them, but only as `open|filtered`:
+
+```bash
+nmap -sU -p5000 <fpga-sim-ip>     # 5000/udp open|filtered
+nmap -sU -p6000 <it-proxy-ip>     # 6000/udp open|filtered
+```
+
+The `open|filtered` ambiguity is **correct and instructive**: a
+real data diode receiver never replies, so a UDP probe gets no
+ICMP-unreachable and no datagram back — nmap cannot prove the port
+is open. This is the network signature of a unidirectional
+service. Make it a debrief point.
+
+> **Instructor note — the source of truth:**
+> ```36:45:phase1_env/fpga_sim/fpga_sim.py
+> LISTEN_HOST    = '0.0.0.0'
+> LISTEN_PORT    = int(os.environ.get('FPGA_LISTEN_PORT', '5000'))
+> ```
+> `socket.SOCK_DGRAM` → UDP. Same pattern in `it_proxy.py`.
 
 ### 1.3 Role inference — expected guesses
 
+From the **TCP** scan (what most students will have):
+
 - Port **3000** → Grafana (or generic web UI)
 - Port **8086** → InfluxDB (or generic DB)
-- Port **5000** → custom service (acceptable)
-- Port **6000** → custom service (acceptable)
+
+Only students who ran a **UDP** scan (`-sU`) will also have:
+
+- **UDP/5000** → custom one-way service (acceptable)
+- **UDP/6000** → custom one-way service (acceptable)
 
 **The trap:** students will look for port 502 in the `it-net`
 scan and not find it. The PLC is in `ot-net`, unreachable from
 their foothold. **This is the point.** They need to pivot — but
 they don't have the pivot yet. Section 2 surfaces this gap.
+
+> **Caveat — Docker hands students the hostnames.** In this
+> containerised lab, Docker's embedded DNS answers reverse
+> (PTR) lookups, so `nmap` prints names like
+> `grafana.lab_recon_it-net`, `influxdb…`, `it-proxy…`,
+> `fpga-sim…` *before* the student reasons about any port. The
+> "guess the role from ports alone" exercise is therefore
+> partly pre-answered here — that is an artifact of the lab
+> substrate, **not** something a real flat OT network would
+> give an attacker for free. Acknowledge it during debrief:
+> ask students what the role inference *would* have required
+> on a real network with no helpful DNS (banner-grabbing,
+> `-sV`, traffic correlation). If you want the harder version,
+> the PTR records can be stripped from the lab.
 
 ---
 
@@ -131,13 +191,35 @@ where they get the pivot.
 curl -s http://172.20.30.x:3000/ | head -40
 ```
 
-Returns the Grafana login HTML. Students who navigate further
-(or use `curl -s http://.../api/dashboards/...`) will find the
-provisioned diode dashboard, which reveals:
+Returns the Grafana app HTML (HTTP 200). **Anonymous auth is
+enabled** (`GF_AUTH_ANONYMOUS_ENABLED=true`, Viewer role), so the
+attacker needs *no credentials* — the dashboard API is open:
 
-- 15 sensors are being monitored
-- The plant is a "water treatment" simulation
-- The dashboard label says "data diode"
+```bash
+# list dashboards (no auth needed)
+curl -s 'http://172.20.30.x:3000/api/search?type=dash-db'
+#   → [{"title":"Data Diode — Live View", "uid":"...", ...}]
+
+# pull the dashboard definition
+curl -s 'http://172.20.30.x:3000/api/dashboards/uid/<uid>'
+```
+
+What that actually leaks (verified against the provisioned
+dashboard — 9 panels titled **"Data Diode — Live View"**):
+
+- The system is explicitly labelled a **data diode**.
+- Process variables are exposed by name — the panel/query JSON
+  contains **`sensor`, `plc`, `pressure`, `flow`** tags.
+- An attacker learns there is a PLC-driven process and what
+  physical quantities it controls, **without ever reaching the
+  OT network**.
+
+> **Accuracy note for instructors:** the dashboard does *not*
+> literally say "water treatment", and the panel count/tag set
+> can drift if you edit `dashboard/grafana/dashboards/`. Grade
+> on the *concept* (process detail leaked on the IT side), not
+> on a specific string. Re-check the live JSON before class if
+> you've changed the dashboard.
 
 This is the **information leak**: a dashboard hosted on the
 attacker-reachable side that describes the OT process in
