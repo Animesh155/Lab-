@@ -55,6 +55,43 @@ ________________________________________________________________
 
 For each live host, list open TCP ports.
 
+> **Toolkit reference — how to identify what's behind a port.**
+> Work down the list. Stop when you have enough confidence.
+>
+> 1. **Well-known port lookup.** `/etc/services` covers IANA-assigned
+>    ports only:
+>    ```bash
+>    grep -E '^\S+\s+502/tcp' /etc/services
+>    ```
+>    Note: famous app defaults (Grafana 3000, InfluxDB 8086) are
+>    **not** in `/etc/services`. Memory and Google fill that gap.
+>
+> 2. **`nmap -sV` (service/version detection).** Sends targeted
+>    probes (HTTP, TLS, banner grab) and matches against nmap's
+>    signature DB. Usually identifies anything common:
+>    ```bash
+>    nmap -sV -p <port> <ip>
+>    ```
+>    Reports `tcp open <service> <product> <version>` when it can,
+>    `unknown` when it can't.
+>
+> 3. **Manual fingerprinting.** When `-sV` says `unknown`, probe by
+>    hand:
+>    ```bash
+>    curl -v http://<ip>:<port>/        # is it HTTP?
+>    nc -nv <ip> <port>                  # does it volunteer a banner?
+>    echo "HELLO" | nc -nv <ip> <port> | xxd   # what does it answer?
+>    ```
+>
+> 4. **Traffic correlation.** Watch the port live:
+>    ```bash
+>    tcpdump -i any -nn -c 100 host <ip> and port <port>
+>    ```
+>    Even without decoding payloads, **cadence + direction + packet
+>    size** tells you a lot. Steady 1 Hz, one initiator → polling
+>    loop. Bursty + multi-direction → interactive session.
+>
+
 | IP | Open TCP ports |
 |---|---|
 |   |   |
