@@ -16,6 +16,51 @@
 
 services:
 
+  # ── Pin every base-stack container's IP so the lab is
+  #    reproducible across overlays. Module 2's shipped PCAP
+  #    contains 172.20.10.4 ↔ 172.20.10.3, and Module 3's worksheet
+  #    references 172.20.10.3 as the PLC — these pins guarantee
+  #    those addresses regardless of container start order.
+
+  plc-modbus:
+    networks:
+      ot-net:
+        ipv4_address: 172.20.10.3
+
+  ot-simulator:
+    networks:
+      ot-net:
+        ipv4_address: 172.20.10.2
+
+  ot-proxy:
+    networks:
+      ot-net:
+        ipv4_address: 172.20.10.4
+      diode-net:
+        ipv4_address: 172.20.20.3
+
+  fpga-sim:
+    networks:
+      diode-net:
+        ipv4_address: 172.20.20.2
+      it-net:
+        ipv4_address: 172.20.30.2
+
+  influxdb:
+    networks:
+      it-net:
+        ipv4_address: 172.20.30.3
+
+  it-proxy:
+    networks:
+      it-net:
+        ipv4_address: 172.20.30.4
+
+  grafana:
+    networks:
+      it-net:
+        ipv4_address: 172.20.30.5
+
   attacker:
     build:
       context: ./lab_recon/attacker

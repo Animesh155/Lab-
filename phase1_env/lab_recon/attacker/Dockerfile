@@ -24,6 +24,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       jq \
       curl \
       ca-certificates \
+      # Pivot toolkit (Module 3 — ssh into the engineering jumphost)
+      openssh-client \
+      sshpass \
       # Python for exploit modules later
       python3 \
       python3-pip \

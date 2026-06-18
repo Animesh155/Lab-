@@ -45,20 +45,22 @@ A reasonable student response:
 nmap -sn 172.20.30.0/24
 ```
 
-Expected responding hosts (gateway address `.1` is the docker
-bridge):
+Expected responding hosts (the overlay pins every IP so the
+addresses are reproducible across runs and across the
+Module 2 / 3 worksheets that reference them):
 
 | IP | Container |
 |---|---|
 | `172.20.30.1` | docker bridge gateway |
-| `172.20.30.x` | `fpga-sim` |
-| `172.20.30.x` | `it-proxy` |
-| `172.20.30.x` | `influxdb` |
-| `172.20.30.x` | `grafana` |
+| `172.20.30.2` | `fpga-sim` (it-net leg) |
+| `172.20.30.3` | `influxdb` |
+| `172.20.30.4` | `it-proxy` |
+| `172.20.30.5` | `grafana` |
 | `172.20.30.50` | their own attacker container |
 
-Docker assigns the `.x` addresses in start order — note them
-during the debrief, not in advance.
+(If Module 3's `lab_exploit` overlay is layered on, an extra
+host appears at `172.20.30.10` — the `engineering-ws` jumphost.
+Pure Module 1 students do not see it.)
 
 **Discussion points for debrief:**
 
