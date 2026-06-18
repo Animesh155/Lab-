@@ -1,0 +1,29 @@
+# ══════════════════════════════════════════════════════════════
+#  Lab Modbus (Module 2) — Compose overlay
+#
+#  Merges on top of:
+#    1. phase1_env/docker-compose.yml   (base stack)
+#    2. phase1_env/lab_recon/docker-compose.lab.yml  (Module 1 overlay)
+#
+#  Bring up with:
+#    docker compose \
+#      -f docker-compose.yml \
+#      -f lab_recon/docker-compose.lab.yml \
+#      -f lab_modbus/docker-compose.lab.yml \
+#      -p lab_modbus up -d --build
+#
+#  What this adds beyond Module 1:
+#    - Mounts the shipped baseline PCAP into the attacker container
+#      at /lab/pcaps/modbus-baseline.pcapng (read-only).
+#    - That's it. tshark is already in the Module 1 attacker image.
+# ══════════════════════════════════════════════════════════════
+
+services:
+
+  attacker:
+    volumes:
+      # Read-only PCAP corpus for Module 2 hand-decoding tasks.
+      - ./lab_modbus/pcaps:/lab/pcaps:ro
+      # Helper scripts students can call by name (Module 2 doesn't
+      # need any yet; Module 3 will add rogue_master.py here).
+      - ./lab_modbus/tools:/lab/tools:ro
