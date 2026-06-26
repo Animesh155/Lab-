@@ -1,0 +1,18 @@
+# ══════════════════════════════════════════════════════════════
+#  local.rules — Student-authored Snort rules
+#
+#  This file starts empty. Add your rule(s) in Section 4 of the
+#  Module 4 task sheet.
+#
+#  Rule template:
+#    alert tcp <src_ip> <src_port> -> <dst_ip> <dst_port> ( \
+#        msg:"<your message>"; \
+#        <other options>; \
+#        sid:1000001; rev:1; )
+#
+#  Re-run Snort after each edit:
+#    snort -r /lab/pcaps/attack.pcapng -c /lab/snort/snort.conf \
+#          -A console -q
+#
+#  Snort rule SIDs ≥ 1000000 are reserved for local use; pick any.
+# ══════════════════════════════════════════════════════════════

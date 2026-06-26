@@ -1,0 +1,48 @@
+# ══════════════════════════════════════════════════════════════
+#  example.rules — INSTRUCTOR REFERENCE — DO NOT show students
+#
+#  "Good answer" set for Section 4 of Module 4. Three rules in
+#  escalating sophistication. Students who write R1 alone get
+#  full credit; R2 + R3 are bonus.
+#
+#  These rules use raw-byte matching (content + byte_test) rather
+#  than the Modbus preprocessor's `modbus_func` keyword, because
+#  the Ubuntu Snort 2.9 package doesn't ship the dynamic Modbus
+#  preprocessor. This is also pedagogically aligned with Module 2:
+#  students already hand-decoded the Modbus byte layout.
+#
+#  Modbus TCP PDU layout (inside the TCP payload):
+#    byte 0-1  Transaction ID
+#    byte 2-3  Protocol ID (always 0x0000)
+#    byte 4-5  Length
+#    byte 6    Unit ID
+#    byte 7    Function code  <-- 0x06 = Write Single Register
+#    byte 8-9  Reference number (register addr, big-endian uint16)
+#    byte 10-11 Value (for FC=06)
+#
+#  To test: swap include in snort.conf to point at this file
+#  (provision.sh's --reference flag does this automatically).
+# ══════════════════════════════════════════════════════════════
+
+# R1 — Source-IP allow-list (the headline rule). Alerts on the
+# first packet of every TCP session to PLC:502 whose source IP
+# is NOT the legitimate ot-proxy master (172.20.10.4).
+# Catches all 4 rogue sessions (1 read + 3 writes) on their
+# SYN, before any Modbus traffic is even exchanged.
+alert tcp ![172.20.10.4] any -> 172.20.10.3 502 (msg:"OT-IDS R1 Unauthorized Modbus master to PLC"; flow:to_server,established; sid:1000001; rev:1;)
+
+# R2 — Any FC=06 write to the PLC, regardless of source.
+# Operator setpoint changes (FC=06) are rare and high-consequence
+# in production — logging every one is cheap and catches writes
+# from a compromised legit master that R1 would miss.
+# Matches byte 7 of the TCP payload == 0x06 (function code).
+alert tcp any any -> 172.20.10.3 502 (msg:"OT-IDS R2 Modbus Write Single Register FC06 observed"; flow:to_server,established; content:"|06|"; offset:7; depth:1; sid:1000002; rev:1;)
+
+# R3 — Write to a register OUTSIDE the polled range (addr >= 15).
+# Module 2 baseline showed the legit master only polls registers
+# 0-14. A write to address >= 15 is, by construction, going to
+# memory the SCADA never reads ("invisible write"). High-fidelity
+# signature for the Stuxnet-style attack in §4.3 of Module 3 —
+# catches the writes to regs 100 and 500 but NOT the visible
+# write to reg 5.
+alert tcp any any -> 172.20.10.3 502 (msg:"OT-IDS R3 Modbus write to register outside polled range"; flow:to_server,established; content:"|06|"; offset:7; depth:1; byte_test:2,>=,15,0,relative,big; sid:1000003; rev:1;)

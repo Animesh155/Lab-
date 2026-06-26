@@ -1,0 +1,34 @@
+# ══════════════════════════════════════════════════════════════
+#  Lab Defender (Module 4) — Compose overlay
+#
+#  Standalone — does NOT need the base diode stack to be
+#  running, because everything in Module 4 is offline PCAP
+#  analysis. Just the defender-tools container with the shipped
+#  attack pcap mounted.
+#
+#  Bring up with:
+#    docker compose -f lab_defender/docker-compose.lab.yml \
+#      -p lab_defender up -d --build
+#
+#  …or layered on top of the other labs via provision.sh.
+# ══════════════════════════════════════════════════════════════
+
+services:
+
+  defender-tools:
+    build:
+      context: ./lab_defender/defender-tools
+    container_name: defender-tools
+    hostname: defender-tools
+    volumes:
+      - ./lab_defender/pcaps:/lab/pcaps:ro
+      - ./lab_defender/zeek:/lab/zeek:ro
+      - ./lab_defender/snort:/lab/snort:rw   # rw so students can edit local.rules
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    # The Dockerfile CMD is `sleep infinity` so the container stays
+    # up for `docker exec`. No network access needed for the offline
+    # PCAP analysis workflow.
+
+# No new networks — defender-tools doesn't need to talk to anyone.
