@@ -1,0 +1,15 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "MountAndWriteEventLog",
+      "Effect": "Allow",
+      "Action": [
+        "elasticfilesystem:ClientMount",
+        "elasticfilesystem:ClientWrite",
+        "elasticfilesystem:DescribeMountTargets"
+      ],
+      "Resource": "arn:aws:elasticfilesystem:REGION:ACCOUNT_ID:file-system/fs-EFS_ID"
+    }
+  ]
+}

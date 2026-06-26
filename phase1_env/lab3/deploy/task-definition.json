@@ -1,0 +1,78 @@
+{
+  "family": "lab3",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::ACCOUNT_ID:role/lab3-task-execution-role",
+  "taskRoleArn": "arn:aws:iam::ACCOUNT_ID:role/lab3-task-role",
+  "runtimePlatform": {
+    "operatingSystemFamily": "LINUX",
+    "cpuArchitecture": "X86_64"
+  },
+  "containerDefinitions": [
+    {
+      "name": "lab3",
+      "image": "ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/lab3:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "name": "http",
+          "containerPort": 8080,
+          "hostPort": 8080,
+          "protocol": "tcp",
+          "appProtocol": "http"
+        }
+      ],
+      "environment": [
+        {"name": "LAB3_EVENTS_DIR", "value": "/data/events"},
+        {"name": "PORT", "value": "8080"}
+      ],
+      "secrets": [
+        {
+          "name": "LAB3_INSTRUCTOR_TOKEN",
+          "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:lab3/instructor-token-XXXXXX:token::"
+        }
+      ],
+      "mountPoints": [
+        {
+          "sourceVolume": "events",
+          "containerPath": "/data/events",
+          "readOnly": false
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/lab3",
+          "awslogs-region": "REGION",
+          "awslogs-stream-prefix": "lab3",
+          "awslogs-create-group": "true"
+        }
+      },
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/', timeout=2).status==200 else 1)\""
+        ],
+        "interval": 15,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 15
+      }
+    }
+  ],
+  "volumes": [
+    {
+      "name": "events",
+      "efsVolumeConfiguration": {
+        "fileSystemId": "fs-EFS_ID",
+        "transitEncryption": "ENABLED",
+        "authorizationConfig": {
+          "accessPointId": "fsap-ACCESS_POINT_ID",
+          "iam": "ENABLED"
+        }
+      }
+    }
+  ]
+}

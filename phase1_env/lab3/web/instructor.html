@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lab 3 — Instructor</title>
+  <link rel="stylesheet" href="/instructor.css" />
+</head>
+<body>
+
+  <!-- ── Token prompt (shown if no ?token=… in URL) ───────────────── -->
+  <div id="token-card" class="token-card" hidden>
+    <h2>Instructor sign-in</h2>
+    <p>Paste the instructor token to open the dashboard.</p>
+    <input id="token-input" type="password" placeholder="instructor token" autocomplete="off" />
+    <button id="token-submit">Open dashboard</button>
+    <p class="hint">Or visit <code>/instructor?token=YOUR_TOKEN</code> directly.</p>
+  </div>
+
+  <!-- ── Main dashboard (shown once authed) ───────────────────────── -->
+  <div id="dashboard" hidden>
+
+    <header id="topbar">
+      <div class="left">
+        <span class="brand">LAB 3 · INSTRUCTOR</span>
+        <span class="session" id="session-id">—</span>
+      </div>
+      <div class="right">
+        <span class="pill" id="conn-pill">connecting…</span>
+        <span class="pill" id="time-pill">phase 0:00</span>
+        <button id="reset-session-btn" class="danger small" title="Wipe groups, votes, outcomes — start over">Reset session</button>
+      </div>
+    </header>
+
+    <!-- Phase control row -->
+    <section id="phase-bar" class="phase-bar">
+      <div class="phase-current">
+        <span class="label">Current phase</span>
+        <span class="phase-name" id="current-phase">—</span>
+      </div>
+
+      <div class="phase-actions">
+        <button id="advance-btn" class="primary big" disabled>
+          <span class="btn-main">Advance →</span>
+          <span class="btn-sub" id="advance-next">—</span>
+        </button>
+        <button id="inject2-btn" class="warn big" disabled>
+          <span class="btn-main">Fire Inject 2</span>
+          <span class="btn-sub">worker radio + gauge</span>
+        </button>
+      </div>
+
+      <div class="phase-help" id="phase-help">—</div>
+    </section>
+
+    <!-- Stats strip -->
+    <section class="stats-strip">
+      <div class="stat"><span class="label">Groups</span><span class="value" id="stat-groups">0</span></div>
+      <div class="stat"><span class="label">Students connected</span><span class="value" id="stat-students">0</span></div>
+      <div class="stat"><span class="label">Votes A / B</span><span class="value" id="stat-votes">— / —</span></div>
+      <div class="stat"><span class="label">Outcomes</span><span class="value" id="stat-outcomes">—</span></div>
+    </section>
+
+    <!-- Per-group cards -->
+    <section id="groups">
+      <h2>Groups</h2>
+      <div id="group-grid" class="group-grid">
+        <p class="muted" id="no-groups">No students have joined yet. Share the student URL.</p>
+      </div>
+    </section>
+
+    <!-- Event log -->
+    <section id="event-log">
+      <h2>Event log <span class="muted" id="event-count">(0)</span></h2>
+      <div id="event-feed" class="event-feed"></div>
+    </section>
+
+  </div>
+
+  <script src="/instructor.js"></script>
+</body>
+</html>

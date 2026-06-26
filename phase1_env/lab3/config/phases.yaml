@@ -1,0 +1,75 @@
+# Lab 3 — Phase prompts per role.
+#
+# Each phase block contains role-specific text the HMI shows to that student.
+# Edit freely without touching code — the server reads this file at startup.
+#
+# Roles (spec-aligned): PLANT_MANAGER, OT_ENGINEER, IT_CYBER_LEAD, PR.
+
+LOBBY:
+  description: "Pick your group and role. Wait for the instructor to begin."
+  roles: {}
+
+BRIEFING:
+  description: |
+    Ransomware has locked the control screens. The physical chemical mixing
+    machines are running, but you cannot see the pressure levels.
+  roles:
+    PLANT_MANAGER: "You own the safety case. Only you can authorize shutdown."
+    OT_ENGINEER:   "You know the process and the PLCs. The HMI was your world."
+    IT_CYBER_LEAD: "Cyber incident responder on shift. Your instinct: contain."
+    PR:            "Communications. You handle the press, customers, regulators."
+
+NORMAL_OPS:
+  description: "Normal operating window. Watch the trends. Nothing should surprise you."
+  roles: {}
+
+INJECT_1_RANSOMWARE:
+  description: "INCIDENT: The HMI just locked. A ransom note is on screen. Plant is still running."
+  roles:
+    # Inject 1 = the IT-vs-OT cable-pull fight.
+    PLANT_MANAGER: "You will hear two arguments in the next minute. Listen to both. The call is yours."
+    OT_ENGINEER:   "If anyone proposes pulling cables — push back. Severing the network may also kill the automated safety valves. Make that case out loud."
+    IT_CYBER_LEAD: "Your training says: isolate now to stop the spread. Argue for pulling the network. You are the person in the room with that instinct — own it."
+    PR:            "Disclosure clock starts the moment we acknowledge an incident. Who knows? Who must know? In what order?"
+
+DISCUSSION_1:
+  description: "Argue it out. The IT/Cyber Lead wants the network down. The OT Engineer says that may kill the safety automation. The Plant Manager decides."
+  roles:
+    PLANT_MANAGER: "You don't have to follow either side. Name your reasoning."
+    OT_ENGINEER:   "The PLC fieldbus is on the same physical network as the HMI. Cutting cables cuts both. Say so."
+    IT_CYBER_LEAD: "Don't soften your case. If you back off, the room never has the real argument."
+    PR:            "Whatever they decide — what's the one-sentence statement we issue tonight?"
+
+INJECT_2_WORKER_RADIO:
+  description: |
+    RADIO CALL — Floor worker:
+    "Reactor 1 outlet line is reading high pressure on the local gauge. I'm
+    walking up to the manual relief valve. ETA 4 minutes to reach it.
+    Can you confirm the gauge from the HMI?"
+  roles:
+    PLANT_MANAGER: "You can see one gauge through the lock screen. Do you trust it?"
+    OT_ENGINEER:   "Without the HMI, what telemetry do you actually trust right now?"
+    IT_CYBER_LEAD: "The attacker may still be in the network. Could the gauge value be spoofed?"
+    PR:            "If we knowingly send a worker into a pressurized zone, how do we explain that decision tomorrow?"
+
+DISCUSSION_2:
+  description: "Pressure is climbing. Discuss. The instructor will open voting."
+  roles: {}
+
+ULTIMATUM:
+  description: |
+    VOTE NOW. Two options:
+      A) Emergency physical shutdown. Vent the reactor. Halt production. Recall the worker. Guarantees safety. Destroys equipment.
+      B) Keep it running blind. Send the worker to manually vent. Saves money. Risks explosion and life.
+  roles: {}
+
+OUTCOME:
+  description: "Your decision plays out. Watch."
+  roles: {}
+
+DEBRIEF:
+  description: |
+    Plant Manager from each group: state your vote, name the one consideration
+    that pushed you over, name the strongest counter-argument you heard.
+    Then the instructor closes the room.
+  roles: {}

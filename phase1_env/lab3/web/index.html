@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Meridian Chemicals — Plant 4 HMI</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+
+  <!-- ── Top status bar (always visible) ──────────────────────────── -->
+  <header id="topbar">
+    <div class="brand">MERIDIAN CHEMICALS · PLANT 4 · HMI Console</div>
+    <div class="status-cluster">
+      <span class="status-pill" id="phase-pill">—</span>
+      <span class="status-pill" id="role-pill">no role</span>
+      <span class="status-pill" id="conn-pill">connecting…</span>
+    </div>
+  </header>
+
+  <main id="stage">
+
+    <!-- ── LOBBY ───────────────────────────────────────────────────── -->
+    <section class="screen" data-phase="LOBBY" hidden>
+      <div class="card lobby-card">
+        <h1>Shift Sign-In</h1>
+        <p>Join your assigned group and select your role for tonight's shift.</p>
+        <form id="join-form">
+          <label>Display name
+            <input name="display_name" required maxlength="40" autocomplete="off" />
+          </label>
+          <label>Group
+            <select name="group_id" required>
+              <option value="g1">Group 1</option>
+              <option value="g2">Group 2</option>
+              <option value="g3">Group 3</option>
+              <option value="g4">Group 4</option>
+              <option value="g5">Group 5</option>
+              <option value="g6">Group 6</option>
+              <option value="g7">Group 7</option>
+              <option value="g8">Group 8</option>
+              <option value="g9">Group 9</option>
+              <option value="g10">Group 10</option>
+            </select>
+          </label>
+          <label>Role
+            <select name="role" required>
+              <option value="PLANT_MANAGER">Plant Manager</option>
+              <option value="OT_ENGINEER">OT Engineer</option>
+              <option value="IT_CYBER_LEAD">IT/Cyber Lead</option>
+              <option value="PR">PR</option>
+            </select>
+          </label>
+          <button type="submit">Sign in</button>
+          <div id="join-error" class="error" hidden></div>
+        </form>
+      </div>
+    </section>
+
+    <!-- ── BRIEFING ────────────────────────────────────────────────── -->
+    <section class="screen" data-phase="BRIEFING" hidden>
+      <div class="card">
+        <h1>Shift Briefing</h1>
+        <p>You are operators at Meridian Chemicals, Plant 4. A live reactor mixes feedstock under pressure. You have a few minutes to familiarize yourselves with the HMI before the shift starts.</p>
+        <div class="role-prompt" id="briefing-role-prompt"></div>
+        <p class="muted">Waiting for instructor to start the shift…</p>
+      </div>
+    </section>
+
+    <!-- ── NORMAL_OPS ──────────────────────────────────────────────── -->
+    <section class="screen" data-phase="NORMAL_OPS" hidden>
+      <div class="hmi-grid">
+        <div class="hmi-tile"><div class="label">Reactor Pressure</div><div class="value" id="s_reactor1_pressure">—</div><div class="unit">bar</div></div>
+        <div class="hmi-tile"><div class="label">Reactor Temp</div><div class="value" id="s_reactor1_temp">—</div><div class="unit">°C</div></div>
+        <div class="hmi-tile"><div class="label">Intake Flow</div><div class="value" id="s_feed_flow">—</div><div class="unit">L/min</div></div>
+        <div class="hmi-tile"><div class="label">Tank Level</div><div class="value" id="s_tank_level">—</div><div class="unit">mm</div></div>
+        <div class="hmi-tile"><div class="label">Outlet Flow</div><div class="value" id="s_outlet_flow">—</div><div class="unit">L/min</div></div>
+        <div class="hmi-tile"><div class="label">Level Valve</div><div class="value" id="s_pump_a">—</div><div class="unit">%</div></div>
+        <div class="hmi-tile"><div class="label">Feed Valve</div><div class="value" id="s_pump_b">—</div><div class="unit">%</div></div>
+        <div class="hmi-tile"><div class="label">Pressure Valve</div><div class="value" id="s_valve">—</div><div class="unit">%</div></div>
+      </div>
+      <p class="muted center">Normal operating window. All systems nominal.</p>
+    </section>
+
+    <!-- ── INJECT_1 + DISCUSSION_1 (ransomware lock, no gauge) ─────── -->
+    <section class="screen lockscreen" data-phase="INJECT_1_RANSOMWARE DISCUSSION_1" hidden>
+      <div class="glitch-overlay"></div>
+      <div class="lock-card">
+        <h1 class="ransom-title">YOUR FILES HAVE BEEN ENCRYPTED.</h1>
+        <p class="ransom-body">
+          All control system files at Plant 4 are now encrypted with military-grade AES-256.<br/>
+          Operations are halted. Do not attempt recovery.
+        </p>
+        <p class="ransom-demand">
+          To restore: pay <span class="amount">$2,400,000</span> in Bitcoin within <span class="timer">71h 49m 12s</span>.
+        </p>
+        <p class="ransom-body small">
+          BTC: <code>bc1q...meridian-x4-decryptor-pool</code><br/>
+          Contact: <code>recover@blacksiloth.onion</code>
+        </p>
+        <div class="role-prompt" id="lock1-role-prompt"></div>
+      </div>
+    </section>
+
+    <!-- ── INJECT_2 + DISCUSSION_2 + ULTIMATUM (lock + gauge) ──────── -->
+    <section class="screen lockscreen" data-phase="INJECT_2_WORKER_RADIO DISCUSSION_2 ULTIMATUM" hidden>
+      <div class="glitch-overlay"></div>
+
+      <div class="lock-card narrow">
+        <h1 class="ransom-title small">YOUR FILES HAVE BEEN ENCRYPTED.</h1>
+        <p class="ransom-body">Plant 4 control system: <strong>OFFLINE</strong>.</p>
+
+        <div id="radio-alert" class="radio-alert">
+          <div class="radio-header">📻 INCOMING RADIO — Floor Worker</div>
+          <p>
+            "Reactor 1 outlet line is reading high pressure on the local gauge.
+            I'm going to walk up to the manual relief valve. ETA 4 minutes to reach it.
+            Can you confirm the gauge from the HMI?"
+          </p>
+        </div>
+
+        <div class="role-prompt" id="lock2-role-prompt"></div>
+
+        <!-- Pressure gauge — only rendered for Plant Manager -->
+        <div id="gauge-container" hidden>
+          <div class="gauge-label">REACTOR 1 OUTLET PRESSURE</div>
+          <div class="gauge">
+            <svg viewBox="0 0 200 120" class="gauge-svg">
+              <!-- arc segments -->
+              <path d="M20,100 A80,80 0 0,1 92,24" stroke="#3a8b3a" stroke-width="14" fill="none"/>
+              <path d="M92,24 A80,80 0 0,1 152,40" stroke="#c9b341" stroke-width="14" fill="none"/>
+              <path d="M152,40 A80,80 0 0,1 180,100" stroke="#c43a2e" stroke-width="14" fill="none"/>
+              <!-- needle -->
+              <line id="gauge-needle" x1="100" y1="100" x2="100" y2="30" stroke="#fff" stroke-width="3" stroke-linecap="round" transform="rotate(-90 100 100)"/>
+              <circle cx="100" cy="100" r="6" fill="#fff"/>
+              <text x="20" y="115" class="gauge-tick">0</text>
+              <text x="92" y="20" class="gauge-tick">4</text>
+              <text x="178" y="115" class="gauge-tick">8</text>
+            </svg>
+            <div class="gauge-readout">
+              <span id="gauge-value">—</span><span class="gauge-unit">bar</span>
+            </div>
+            <div id="gauge-warning" class="gauge-warning" hidden>⚠ RED ZONE</div>
+          </div>
+        </div>
+
+        <!-- Voting UI (only in ULTIMATUM) -->
+        <div id="vote-panel" hidden>
+          <h2 class="vote-title">DECISION REQUIRED — VOTE NOW</h2>
+          <div class="vote-options">
+            <button class="vote-btn vote-a" data-choice="A">
+              <strong>A · Emergency Shutdown</strong>
+              <span>Vent the reactor. Halt production. Recall the worker.</span>
+            </button>
+            <button class="vote-btn vote-b" data-choice="B">
+              <strong>B · Do Nothing</strong>
+              <span>Let the worker reach the manual relief valve.</span>
+            </button>
+          </div>
+          <div class="vote-tally">
+            Your group: <span id="tally-a">0</span> chose A · <span id="tally-b">0</span> chose B
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── OUTCOME ─────────────────────────────────────────────────── -->
+    <section class="screen" data-phase="OUTCOME" hidden>
+      <div class="card outcome-card" id="outcome-card">
+        <h1 id="outcome-title">—</h1>
+        <pre id="outcome-narrative">Waiting for outcome…</pre>
+        <div class="outcome-stats">
+          <div><span class="stat-label">Casualties</span><span class="stat-value" id="outcome-casualties">—</span></div>
+          <div><span class="stat-label">Cost</span><span class="stat-value" id="outcome-cost">—</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── DEBRIEF ─────────────────────────────────────────────────── -->
+    <section class="screen" data-phase="DEBRIEF" hidden>
+      <div class="card">
+        <h1>Debrief</h1>
+        <p><strong>Plant Manager from each group</strong> presents in turn:</p>
+        <ol>
+          <li>State your group's vote — A or B.</li>
+          <li>Name the one consideration that pushed you over.</li>
+          <li>Name the strongest argument you heard for the other side.</li>
+        </ol>
+        <p class="muted">Then the instructor closes the room.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
