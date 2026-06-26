@@ -3,10 +3,15 @@
 #
 #  Data flow (one direction only):
 #
-#  plc-modbus ──(ot-net)──▶ ot-proxy ──(diode-net)──▶ fpga-sim ──(it-net)──▶ it-proxy
-#  (Modbus TCP                (Modbus adapter +        (CRC+FIFO+Forward)    (Dedup+Decode)
-#   fake PLC,                  Frame+Copy+Send)
-#   15 sensors)
+#  plc-modbus  ─┐
+#  plc-s7      ─┼─(ot-net)─▶ ot-proxy ──(diode-net)──▶ fpga-sim ──(it-net)──▶ it-proxy
+#  plc-opcua   ─┘            (ADAPTER=                 (CRC+FIFO+Forward)    (Dedup+Decode)
+#                             modbus | s7 | opcua)
+#
+#  Three parallel PLCs expose the same 15 process tags through three
+#  different ICS protocols (Modbus TCP / S7comm / OPC UA Binary). The
+#  ot-proxy runs ONE adapter at a time, selected by the ADAPTER env
+#  var — change it and restart ot-proxy to flip the diode source.
 #
 #  Legacy ot-simulator (Node-RED, HTTP/JSON) kept for backward compat
 #  but ot-proxy now defaults to Modbus adapter.
@@ -19,6 +24,28 @@ services:
     build:
       context: ./ot_simulators/modbus_plc
     container_name: plc-modbus
+    networks:
+      - ot-net
+    restart: unless-stopped
+
+  # ── ZONE 0: SIEMENS S7-1200 SIMULATOR (S7comm / TCP 102) ────
+  # Parallel PLC for the multi-protocol curriculum. Same 15 logical
+  # tags exposed as INTs in DB1 via python-snap7.
+  plc-s7:
+    build:
+      context: ./ot_simulators/s7_plc
+    container_name: plc-s7
+    networks:
+      - ot-net
+    restart: unless-stopped
+
+  # ── ZONE 0: OPC UA SIMULATOR (OPC UA Binary / TCP 4840) ─────
+  # Parallel PLC for the multi-protocol curriculum. Same 15 logical
+  # tags under Objects.ProcessVariables, served by asyncua.
+  plc-opcua:
+    build:
+      context: ./ot_simulators/opcua_plc
+    container_name: plc-opcua
     networks:
       - ot-net
     restart: unless-stopped
@@ -53,7 +80,7 @@ services:
       - FPGA_HOST=fpga-sim
       - FPGA_PORT=5000
       - POLL_INTERVAL=1.0
-      - NUM_COPIES=3
+      - NUM_COPIES=1               # Reed-Solomon FEC replaces 3-copy redundancy
       - INTERLEAVE_DEPTH=3
     networks:
       - ot-net        # can reach plc-modbus
@@ -64,7 +91,8 @@ services:
 
   # ── ZONE 3: FPGA SIMULATOR (The One-Way Gate) ──────────────
   fpga-sim:
-    image: python:3.12-slim
+    build:
+      context: ./fpga_sim         # needs reedsolo lib for RS decoding
     container_name: fpga-sim
     working_dir: /app
     command: python -u fpga_sim.py

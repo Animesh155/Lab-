@@ -4,7 +4,7 @@ ot_proxy.py — OT-Side Proxy (multi-adapter version)
 The bridge between the industrial world and the data diode.
 
 What this does:
-  1. POLL:        Fetches sensor data via PLUGGABLE ADAPTERS (Modbus, OPC UA, etc.)
+  1. POLL:        Fetches sensor data via PLUGGABLE ADAPTERS (Modbus, S7, OPC UA)
   2. NORMALIZE:   Adapters convert protocol-specific responses into universal struct
   3. FRAME:       Wraps in wire format with SYNC, SEQ, CRC
   4. COPY:        Generates 3 copies (TTL = 3, 2, 1)
@@ -13,7 +13,9 @@ What this does:
 
 Adapter selection:
   Set ADAPTER environment variable:
-    ADAPTER=modbus   → uses Modbus TCP adapter
+    ADAPTER=modbus   → Modbus TCP adapter (plc-modbus:502)
+    ADAPTER=s7       → Siemens S7comm adapter (plc-s7:102)
+    ADAPTER=opcua    → OPC UA adapter (opc.tcp://plc-opcua:4840/lab/)
     ADAPTER=http     → legacy Node-RED HTTP/JSON path (kept for compatibility)
 """
 
@@ -47,6 +49,14 @@ INTERLEAVE_DEPTH  = int(os.environ.get('INTERLEAVE_DEPTH', '3'))
 # Modbus adapter config
 MODBUS_HOST       = os.environ.get('MODBUS_HOST', 'plc-modbus')
 MODBUS_PORT       = int(os.environ.get('MODBUS_PORT', '502'))
+
+# S7 (Siemens) adapter config
+S7_HOST           = os.environ.get('S7_HOST', 'plc-s7')
+S7_RACK           = int(os.environ.get('S7_RACK', '0'))
+S7_SLOT           = int(os.environ.get('S7_SLOT', '1'))
+
+# OPC UA adapter config
+OPCUA_URL         = os.environ.get('OPCUA_URL', 'opc.tcp://plc-opcua:4840/lab/')
 
 # Legacy HTTP adapter config (for backward compatibility with Node-RED)
 SENSOR_POLL_URL   = os.environ.get('SENSOR_URL', 'http://ot-simulator:1880/api/plc-data')
@@ -143,6 +153,16 @@ def create_adapter():
         from adapters.modbus_adapter import ModbusAdapter
         adapter = ModbusAdapter(host=MODBUS_HOST, port=MODBUS_PORT)
         print(f"[ADAPTER] Modbus TCP → {MODBUS_HOST}:{MODBUS_PORT}")
+        return adapter
+    elif ADAPTER_TYPE == 's7':
+        from adapters.s7_adapter import S7Adapter
+        adapter = S7Adapter(host=S7_HOST, rack=S7_RACK, slot=S7_SLOT)
+        print(f"[ADAPTER] S7comm → {S7_HOST} (rack {S7_RACK}, slot {S7_SLOT})")
+        return adapter
+    elif ADAPTER_TYPE == 'opcua':
+        from adapters.opcua_adapter import OpcUaAdapter
+        adapter = OpcUaAdapter(url=OPCUA_URL)
+        print(f"[ADAPTER] OPC UA → {OPCUA_URL}")
         return adapter
     elif ADAPTER_TYPE == 'http':
         print(f"[ADAPTER] HTTP/JSON (legacy) → {SENSOR_POLL_URL}")
