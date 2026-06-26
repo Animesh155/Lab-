@@ -120,6 +120,8 @@ class FrameReceiver:
         self.confirmed_gaps = 0          # truly lost (after tolerance window)
         self.confirmed_lost_frames = 0
         self.reordered_recovered = 0     # arrived late, gap was false alarm
+        self.rs_corrected_frames = 0     # frames recovered by Reed-Solomon FEC
+        self.rs_corrected_bytes = 0      # total bytes Reed-Solomon repaired
 
     def process(self, seq: int, ttl: int) -> str:
         """
@@ -282,6 +284,8 @@ class MetricsPublisher:
                  .field("reordered",         receiver.reordered_recovered)
                  .field("confirmed_lost",    receiver.confirmed_lost_frames)
                  .field("pending_gaps",      len(receiver.pending_gaps))
+                 .field("rs_corrected_frames", receiver.rs_corrected_frames)
+                 .field("rs_corrected_bytes",  receiver.rs_corrected_bytes)
                  .field("heartbeat_state",   hb_state_num)
                  .field("heartbeat_age_s",   float(hb_age))
                  .field("heartbeat_total",   heartbeat.total_heartbeats)
@@ -443,11 +447,20 @@ def main():
         receiver.expire_pending_gaps()
         heartbeat.check_timeout()
 
-        # ── CRC Check (defense in depth) ─────────────────────
+        # ── CRC + RS Check (defense in depth) ────────────────
+        # parse_frame() validates CRC first, then attempts RS recovery
+        # if CRC fails. Returns None if both fail (uncorrectable).
         parsed = parse_frame(data)
         if parsed is None:
-            print(f"[DROP] Bad CRC or malformed frame ({len(data)} bytes)")
+            print(f"[DROP] Bad CRC + RS uncorrectable ({len(data)} bytes)")
             continue
+
+        # Track Reed-Solomon corrections (forward error correction stats)
+        if parsed.get('rs_corrected', 0) > 0:
+            receiver.rs_corrected_frames += 1
+            receiver.rs_corrected_bytes += parsed['rs_corrected']
+            print(f"[RS-FIX] seq={parsed['seq']:>6d} | "
+                  f"fixed {parsed['rs_corrected']} byte error(s)")
 
         seq = parsed['seq']
         ttl = parsed['ttl']
@@ -507,13 +520,14 @@ def main():
 
 
 def _print_stats(receiver, heartbeat):
-    """Print stats with reorder-aware metrics + heartbeat status."""
+    """Print stats with reorder-aware metrics + heartbeat status + RS recoveries."""
     pending = sum(len(g['missing']) for g in receiver.pending_gaps)
     print(f"[STATS] received={receiver.total_received} "
           f"unique={len(receiver.seen)} "
           f"duplicates={receiver.total_duplicates} "
           f"reordered={receiver.reordered_recovered} "
           f"confirmed_lost={receiver.confirmed_lost_frames} "
+          f"rs_fixed={receiver.rs_corrected_frames} "
           f"pending={pending}")
 
     # Loss rate uses CONFIRMED losses only
