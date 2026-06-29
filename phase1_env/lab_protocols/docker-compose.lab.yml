@@ -1,0 +1,26 @@
+# ══════════════════════════════════════════════════════════════
+#  Lab Protocols (Module 5) — Compose overlay
+#
+#  Layered on top of the base diode stack + lab_recon. Adds:
+#    1. ot-net reachability to `attacker` so the student can
+#       hit plc-s7 (102) and plc-opcua (4840) without first
+#       pivoting through engineering-ws. (Module 3 already
+#       taught the pivot — this module is about protocols.)
+#    2. Bind-mounts lab_protocols/tools and lab_protocols/pcaps
+#       into the attacker container at /lab/tools and /lab/pcaps.
+#
+#  Bring up with:
+#    bash lab_protocols/provision.sh
+# ══════════════════════════════════════════════════════════════
+
+services:
+
+  attacker:
+    networks:
+      it-net:
+        ipv4_address: 172.20.30.50
+      ot-net:
+        ipv4_address: 172.20.10.50    # workbench host on OT segment
+    volumes:
+      - ./lab_protocols/tools:/lab/tools:rw      # rw — students edit your_*_client.py
+      - ./lab_protocols/pcaps:/lab/pcaps:rw      # rw — provision.sh captures multi.pcap here

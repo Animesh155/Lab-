@@ -33,10 +33,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       python3-scapy \
     && rm -rf /var/lib/apt/lists/*
 
-# pymodbus is needed for Modules 2 & 3 — pre-install so students
+# pymodbus is needed for Modules 2 & 3, python-snap7 + asyncua are
+# needed for the protocol-diversity module. Pre-install so students
 # don't need internet at exploit time.
 RUN pip3 install --break-system-packages \
       pymodbus==3.6.4 \
+      python-snap7==2.0.2 \
+      asyncua==1.1.5 \
       requests
 
 # The cold-start brief — first thing the student reads.
