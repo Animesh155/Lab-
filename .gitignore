@@ -5,7 +5,8 @@ phase1_env/hai/hai-20.07/*.csv*
 phase1_env/hai/hai-22.04/*.csv*
 phase1_env/hai/hai-23.05/*.csv*
 phase1_env/hai/haiend-23.05/*.csv*
-phase1_env/ot_simulators/modbus_plc/data/
+phase1_env/ot_simulators/modbus_plc/data/*
+!phase1_env/ot_simulators/modbus_plc/data/train1.csv.gz
 # But DO keep documentation that goes with the datasets
 !phase1_env/hai/README.md
 !phase1_env/hai/hai_dataset_technical_details.pdf
